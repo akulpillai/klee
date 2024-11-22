@@ -4734,8 +4734,17 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 Function * EntryPointLLVM;
 int uc= true;
 int harness_symbolics =0;
-MemoryObject * Executor::allocate_recursive_memory(ExecutionState * state, Type * ty, Function * f) {
+MemoryObject * Executor::allocate_recursive_memory(ExecutionState * state, Type * ty, Function * f, int depth) {
 		Instruction *first = &*(f->begin()->begin());
+		if (depth > 20) {
+				auto sz = ty->getPrimitiveSizeInBits()/8;
+				auto mo =
+                                memory->allocate(sz,
+                                                /*isLocal=*/true, /*isGlobal=*/false,
+                                                /*allocSite=*/first, /*alignment=*/8);
+				return mo;
+		}
+
 		if (auto ptr = dyn_cast<llvm::PointerType>(ty)) {
 				//TODO
 				std::cerr<<"PointerType"<<std::endl;
@@ -4756,7 +4765,8 @@ MemoryObject * Executor::allocate_recursive_memory(ExecutionState * state, Type 
 //                                          errs() << "Created GEP for field " << i << " of struct " << ST->getName() << ": " << *GEP << "\n";
 										Type *FieldType = st->getElementType(i);
                                         if (FieldType->isPointerTy()) {
-												auto mo_field = allocate_recursive_memory(state, FieldType, f);
+
+												auto mo_field = allocate_recursive_memory(state, FieldType, f, depth++);
 												bindObjectInState(*state, mo_field, false);
 												ptr_os->write(offset, mo_field->getBaseExpr());
 										}
@@ -4835,7 +4845,7 @@ void Executor::runFunctionAsMain(Function *f,
 				if (uc) {
 					for (ai; ai!=ae; ai++) {
 						auto type = ai->getType();
-						auto mo = allocate_recursive_memory(state, type, f);
+						auto mo = allocate_recursive_memory(state, type, f, 0);
                         if (!mo)
                                 klee_error("Could not allocate memory for function arguments");
 

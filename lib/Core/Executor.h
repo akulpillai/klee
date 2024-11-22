@@ -218,7 +218,7 @@ private:
 
   void run(ExecutionState &initialState);
 
-  MemoryObject * allocate_recursive_memory(ExecutionState *s, llvm::Type * ty, llvm::Function * f);
+  MemoryObject * allocate_recursive_memory(ExecutionState *s, llvm::Type * ty, llvm::Function * f, int depth);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
